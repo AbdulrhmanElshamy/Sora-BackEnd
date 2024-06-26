@@ -13,7 +13,7 @@ using Sofra.Api.Contracts.Kitchen;
 using Microsoft.AspNetCore.Razor.TagHelpers;
 using Sofra.Application.Helper;
 using Microsoft.EntityFrameworkCore;
-using UniLearn.API.Errors;
+using Sofra.Api.Errors;
 namespace Sofra.Api.Services;
 
 public class AuthService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IJwtProvider jwtProvider) : IAuthService
@@ -173,12 +173,16 @@ public class AuthService(ApplicationDbContext dbContext, UserManager<Application
                 Avatar = ImageHelper.UploadImage(request.Avatar),
             };
 
-            var IsExistingCategories = await Task.WhenAll(request.Categories.Select(async x =>
-                await _dbContext.Categories.AnyAsync(c => c.Id == x && !c.IsDeleted && c.KitchenCategories.Any(x => x.KitchenId == c.Id) , cancellationToken)
-            )).ContinueWith(t => t.Result.All(result => result));
+            bool IsExistingCategory;
 
-            if (!IsExistingCategories)
-                Result.Failure<AuthResponse>(CategoryErrors.CategoryNotFound);
+            foreach (var Item in request.Categories)
+            {
+                IsExistingCategory = await _dbContext.Categories.AnyAsync(c => c.Id == Item && !c.IsDeleted);
+                if (!IsExistingCategory)
+                    return Result.Failure<AuthResponse>(CategoryErrors.CategoryNotFound);
+
+                Kitchen.KitchenCategories.Add(new KitchenCategory() { CategoryId = Item });
+            }
 
             foreach (var item in request.Categories)
             {

@@ -6,7 +6,7 @@ using Sofra.Api.Data;
 using Sofra.Api.Models;
 using Sofra.Application.Helper;
 using System.Security.Claims;
-using UniLearn.API.Errors;
+using Sofra.Api.Errors;
 
 namespace Sofra.Api.Services.MealServices
 {

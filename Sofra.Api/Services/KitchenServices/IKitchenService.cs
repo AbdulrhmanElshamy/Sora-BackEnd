@@ -9,7 +9,11 @@ namespace Sofra.Api.Services.KitchenServices
     {
         Task<IEnumerable<KitchenResponse>> GetAllAsync(AddressRequest request,CancellationToken cancellationToken = default);
 
+        Task<IEnumerable<KitchenResponse>> GetAllAsync(CancellationToken cancellationToken = default);
+
         Task<Result<KitchenResponse>> GetAsync(int Id, AddressRequest request, CancellationToken cancellationToken = default);
+
+        Task<Result<KitchenResponse>> GetAsync(int Id, CancellationToken cancellationToken = default);
 
         Task<Result> SetAddress(AddressRequest request, CancellationToken cancellationToken = default);
 

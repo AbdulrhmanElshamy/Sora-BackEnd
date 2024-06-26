@@ -4,7 +4,7 @@ using Sofra.Api.Abstractions;
 using Sofra.Api.Contracts.Category;
 using Sofra.Api.Data;
 using Sofra.Api.Models;
-using UniLearn.API.Errors;
+using Sofra.Api.Errors;
 
 namespace Sofra.Api.Services.CategoryServices
 {

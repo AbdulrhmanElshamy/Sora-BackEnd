@@ -1,6 +1,6 @@
 ﻿using Sofra.Api.Abstractions;
 
-namespace UniLearn.API.Errors;
+namespace Sofra.Api.Errors;
 
 public static class MealErrors
 {

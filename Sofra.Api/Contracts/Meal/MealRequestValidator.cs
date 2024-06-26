@@ -2,9 +2,9 @@
 
 namespace Sofra.Api.Contracts.Meal
 {
-    public class MealRequestValidator : AbstractValidator<MealRequest>
+    public class CartRequestValidator : AbstractValidator<MealRequest>
     {
-        public MealRequestValidator()
+        public CartRequestValidator()
         {
             RuleFor(x => x.Name)
                 .NotEmpty()

@@ -9,7 +9,7 @@ using Sofra.Api.Helpers;
 using Sofra.Api.Models;
 using Sofra.Application.Helper;
 using System.Security.Claims;
-using UniLearn.API.Errors;
+using Sofra.Api.Errors;
 
 namespace Sofra.Api.Services.KitchenServices
 {
@@ -41,11 +41,22 @@ namespace Sofra.Api.Services.KitchenServices
             return filteredKitchens.Adapt<IEnumerable<KitchenResponse>>();
         }
 
+
+        public async Task<IEnumerable<KitchenResponse>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            var kitchens = await _dbContext.Kitchens.Include(k => k.Address).AsNoTracking().ToListAsync(cancellationToken);
+
+            return kitchens.Adapt<IEnumerable<KitchenResponse>>();
+        }
+
+
+
         public async Task<Result<KitchenResponse>> GetAsync(int id, AddressRequest request, CancellationToken cancellationToken = default)
         {
             var kitchen = await _dbContext.Kitchens
+                .Where(k => k.Id == id && k.Address != null)
                 .Include(k => k.Address)
-                .FirstOrDefaultAsync(k => k.Id == id && k.Address != null, cancellationToken);
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (kitchen is null)
                 return Result.Failure<KitchenResponse>(KitchenErrors.KitchenNotFound);
@@ -57,6 +68,20 @@ namespace Sofra.Api.Services.KitchenServices
                 request.Longitude);
 
             if (kitchen.MaxDeliveryDistance < distance)
+                return Result.Failure<KitchenResponse>(KitchenErrors.KitchenNotFound);
+
+            return Result.Success(kitchen.Adapt<KitchenResponse>());
+        }
+
+
+        public async Task<Result<KitchenResponse>> GetAsync(int Id, CancellationToken cancellationToken = default)
+        {
+            var kitchen = await _dbContext.Kitchens
+                .Where(k => k.Id == Id)
+                .Include(k => k.Address)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (kitchen is null)
                 return Result.Failure<KitchenResponse>(KitchenErrors.KitchenNotFound);
 
             return Result.Success(kitchen.Adapt<KitchenResponse>());
@@ -91,9 +116,12 @@ namespace Sofra.Api.Services.KitchenServices
 
             CurrentKitchen.KitchenCategories.Clear();
 
+
+            bool IsExistingCategory;
+
             foreach (var Item in request.Categories)
             {
-                var IsExistingCategory = await _dbContext.Categories.AnyAsync(c => c.Id == Item && !c.IsDeleted);
+                IsExistingCategory = await _dbContext.Categories.AnyAsync(c => c.Id == Item && !c.IsDeleted);
                 if (!IsExistingCategory)
                     return Result.Failure(CategoryErrors.CategoryNotFound);
 
@@ -139,6 +167,7 @@ namespace Sofra.Api.Services.KitchenServices
 
             return Result.Success();
         }
+
 
     }
 }

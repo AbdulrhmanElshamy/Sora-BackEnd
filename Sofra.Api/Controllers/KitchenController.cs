@@ -34,6 +34,25 @@ namespace Sofra.Api.Controllers
         }
 
 
+        [HttpGet("")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+        {
+            var result = await _kitchenService.GetAllAsync(cancellationToken);
+
+            return Ok(result);
+        }
+
+        [HttpGet("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Get([FromRoute] int id, CancellationToken cancellationToken)
+        {
+            var result = await _kitchenService.GetAsync(id, cancellationToken);
+
+            return result.IsSuccess ? Ok(result.Value) : result.ToProblem();
+        }
+
+
         [HttpPost("SetAddress")]
         public async Task<IActionResult> SetAddress(AddressRequest request, CancellationToken cancellationToken)
         {

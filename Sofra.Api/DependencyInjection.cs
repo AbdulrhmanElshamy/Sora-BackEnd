@@ -12,6 +12,7 @@ using Sofra.Api.Data;
 using Sofra.Api.Helpers;
 using Sofra.Api.Models;
 using Sofra.Api.Services;
+using Sofra.Api.Services.CartServices;
 using Sofra.Api.Services.CategoryServices;
 using Sofra.Api.Services.KitchenServices;
 using Sofra.Api.Services.MealServices;
@@ -53,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IMealService, MealService>();
         services.AddScoped<IKitchenService, KitchenService>();
+        services.AddScoped<ICartService, CartService>();
 
         //services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
