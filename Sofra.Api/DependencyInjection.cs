@@ -9,7 +9,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Sofra.Api.Authentication;
 using Sofra.Api.Data;
-using Sofra.Api.Helpers;
 using Sofra.Api.Models;
 using Sofra.Api.Services;
 using Sofra.Api.Services.CartServices;
@@ -19,6 +18,7 @@ using Sofra.Api.Services.MealServices;
 using Sofra.Api.Services.OrderServices;
 using System.Reflection;
 using System.Text;
+using X.Paymob.CashIn;
 
 namespace Sofra;
 
@@ -60,6 +60,13 @@ public static class DependencyInjection
 
         //services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
+
+
+        services.AddPaymobCashIn(config => {
+            config.ApiKey = "ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SmpiR0Z6Y3lJNklrMWxjbU5vWVc1MElpd2ljSEp2Wm1sc1pWOXdheUk2T0RZd016QTNMQ0p1WVcxbElqb2lNVGN3TkRVMU56Y3hNaTR4TXpJek1qWWlmUS4ybmItOVNTRzhNVjdGWHlJd21xcHBpLTZKVTFlUWk2SkFHZkJIdTZpTmtYTU1aOTJHSUs1WndJaC1KTXM2Y25FNzdlOEppaWRwbmNIVFRESTZuZzJCQQ==";
+            config.Hmac = "50DE1FC724B86E2B1DDD6F94DD7CA71F";
+            });
+
 
         return services;
     }
@@ -131,11 +138,6 @@ public static class DependencyInjection
             .BindConfiguration(JwtOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-
-        services.AddOptions<GoogleMapOptions>()
-    .BindConfiguration(GoogleMapOptions.SectionName)
-    .ValidateDataAnnotations()
-    .ValidateOnStart();
 
         var jwtSettings = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>();
 

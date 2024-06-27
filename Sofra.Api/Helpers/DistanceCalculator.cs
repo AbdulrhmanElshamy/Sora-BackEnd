@@ -8,63 +8,38 @@ namespace Sofra.Api.Helpers
 {
     public class DistanceCalculator(IOptions<GoogleMapOptions> options)
     {
-        private readonly static string BaseUrl = "https://maps.googleapis.com/maps/api/distancematrix/json";
-        private readonly static string Key = "AIzaSyAYkhN7gr513MozaWiLvx9irJ5hfsU1FJk";
+        private readonly static string BaseUrl = "https://distance-calculator.p.rapidapi.com";
+        private readonly static string Key = "dde95cf623mshca5e69f315d7d77p16b90djsnb282727a0111";
 
 
         public static async Task<double> GetDrivingDistanceAsync(double originLat, double originLon, double destinationLat, double destinationLon)
         {
-            using (HttpClient client = new HttpClient())
+            using (var client = new HttpClient())
             {
-                string requestUrl = $"{BaseUrl}?origins={originLat},{originLon}&destinations={destinationLat},{destinationLon}&key={Key}";
-                HttpResponseMessage response = await client.GetAsync(requestUrl);
-
-               
-
-                if (response.IsSuccessStatusCode)
+                var request = new HttpRequestMessage
                 {
-                    string responseContent = await response.Content.ReadAsStringAsync();
-                    var jsonResponse = JsonConvert.DeserializeObject<Response>(responseContent);
-
-                    if (jsonResponse.Rows!= null && jsonResponse.Rows.Select(x => x.Elements).FirstOrDefault()!= null && jsonResponse.Rows.Select(x => x.Elements.Length).FirstOrDefault() != null)
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri($"{BaseUrl}//distance/simple"),
+                    Headers =
                     {
-                        double distanceInMeters = (double)jsonResponse.Rows.Select(x => x.Elements.Length).FirstOrDefault();
-                        return distanceInMeters / 1000; 
-                    }
-                }
+                        { "x-rapidapi-key", Key },
+                        { "x-rapidapi-host", "distance-calculator8.p.rapidapi.com" },
+                    },
+                };
 
-                throw new Exception("Failed to get driving distance.");
-            }
-        }
 
-        public class Response
-        {
-            public string Status { get; set; }
+                request.RequestUri = new Uri($"{request.RequestUri}?lat_1={originLat}&long_1={originLon}&lat_2={destinationLat}&long_2={destinationLon}");
 
-            [JsonProperty(PropertyName = "origin_addresses")]
-            public string[] OriginAddresses { get; set; }
+                var response = await client.SendAsync(request);
 
-            [JsonProperty(PropertyName = "destination_addresses")]
-            public string[] DestinationAddresses { get; set; }
+                response.EnsureSuccessStatusCode();
+                var jsonString = await response.Content.ReadAsStringAsync();
 
-            public Row[] Rows { get; set; }
+                JObject jsonResponse = JObject.Parse(jsonString);
 
-            public class Data
-            {
-                public int Value { get; set; }
-                public string Text { get; set; }
-            }
+                double distanceKm = (double)jsonResponse["distance"];
 
-            public class Element
-            {
-                public string Status { get; set; }
-                public Data Duration { get; set; }
-                public Data Distance { get; set; }
-            }
-
-            public class Row
-            {
-                public Element[] Elements { get; set; }
+                return distanceKm;
             }
         }
     }

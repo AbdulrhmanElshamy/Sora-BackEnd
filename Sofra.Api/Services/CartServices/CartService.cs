@@ -53,7 +53,13 @@ namespace Sofra.Api.Services.CartServices
             {
                 Cart.Items.Clear();
             }
-            
+
+            foreach (var item in request.Items) 
+            {
+                if (await _dbContext.Meals.AnyAsync(m => m.Id == item.MealId, cancellationToken))
+                    return Result.Failure<CartResponse>(MealErrors.MealNotFound);
+            }
+
             Cart.Items = request.Items.Adapt<ICollection<Models.CartItem>>();
 
              _dbContext.Update(Cart);
