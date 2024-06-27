@@ -46,6 +46,13 @@ namespace Sofra.Api.Services.FavoriteServices
                 Favorite.Items.Clear();
             }
 
+            foreach (var item in request.Items)
+            {
+                if (await _dbContext.Meals.AnyAsync(m => m.Id == item.MealId, cancellationToken))
+                    return Result.Failure<FavoriteResponse>(MealErrors.MealNotFound);
+            }
+
+
             Favorite.Items = request.Items.Adapt<ICollection<Models.FavoriteItem>>();
 
             _dbContext.Update(Favorite);
