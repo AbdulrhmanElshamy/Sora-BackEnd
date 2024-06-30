@@ -6,41 +6,26 @@ using System;
 
 namespace Sofra.Api.Helpers
 {
-    public class DistanceCalculator(IOptions<GoogleMapOptions> options)
+    public class DistanceCalculator()
     {
-        private readonly static string BaseUrl = "https://distance-calculator.p.rapidapi.com";
-        private readonly static string Key = "dde95cf623mshca5e69f315d7d77p16b90djsnb282727a0111";
+        private const double EarthRadiusKm = 6371.0; 
 
-
-        public static async Task<double> GetDrivingDistanceAsync(double originLat, double originLon, double destinationLat, double destinationLon)
+        public static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
-            using (var client = new HttpClient())
-            {
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get,
-                    RequestUri = new Uri($"{BaseUrl}//distance/simple"),
-                    Headers =
-                    {
-                        { "x-rapidapi-key", Key },
-                        { "x-rapidapi-host", "distance-calculator8.p.rapidapi.com" },
-                    },
-                };
+            double dLat = ToRadians(lat2 - lat1);
+            double dLon = ToRadians(lon2 - lon1);
 
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                       Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                       Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
 
-                request.RequestUri = new Uri($"{request.RequestUri}?lat_1={originLat}&long_1={originLon}&lat_2={destinationLat}&long_2={destinationLon}");
+            return EarthRadiusKm * c;
+        }
 
-                var response = await client.SendAsync(request);
-
-                response.EnsureSuccessStatusCode();
-                var jsonString = await response.Content.ReadAsStringAsync();
-
-                JObject jsonResponse = JObject.Parse(jsonString);
-
-                double distanceKm = (double)jsonResponse["distance"];
-
-                return distanceKm;
-            }
+        private static double ToRadians(double angleInDegrees)
+        {
+            return angleInDegrees * (Math.PI / 180.0);
         }
     }
 }

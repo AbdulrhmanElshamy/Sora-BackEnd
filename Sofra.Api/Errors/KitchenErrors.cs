@@ -7,6 +7,9 @@ public static class KitchenErrors
     public static readonly Error KitchenNotFound =
         new("Kitchen.NotFound", "No Kitchen was found with the given ID", StatusCodes.Status404NotFound);
 
+    public static readonly Error KitchenClosed=
+        new("Kitchen.Closed", "Kitchen has been Closed ", StatusCodes.Status400BadRequest);
+
     public static readonly Error DuplicatedKitchenTitle =
         new("Kitchen.DuplicatedTitle", "Another Kitchen with the same title is already exists", StatusCodes.Status409Conflict);
 }

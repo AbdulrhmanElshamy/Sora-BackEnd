@@ -23,12 +23,12 @@ namespace Sofra.Api.Services.KitchenServices
         public async Task<IEnumerable<KitchenResponse>> GetAllAsync(AddressRequest request, CancellationToken cancellationToken = default)
         {
 
-            var query = await _dbContext.Kitchens.Include(k => k.Address).AsNoTracking().ToListAsync();
+            var query = await _dbContext.Kitchens.Include(k => k.Address).Include(k => k.Reviews).AsNoTracking().ToListAsync();
 
             var distanceTasks = query.Select(async x => new
             {
                 Kitchen = x,
-                Distance = await DistanceCalculator.GetDrivingDistanceAsync(x.Address.Latitude, x.Address.Longitude, request.Latitude, request.Longitude)
+                Distance =  DistanceCalculator.CalculateDistance(x.Address.Latitude, x.Address.Longitude, request.Latitude, request.Longitude)
             }).ToList();
 
             var results = await Task.WhenAll(distanceTasks);
@@ -44,7 +44,7 @@ namespace Sofra.Api.Services.KitchenServices
 
         public async Task<IEnumerable<KitchenResponse>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            var kitchens = await _dbContext.Kitchens.Include(k => k.Address).AsNoTracking().ToListAsync(cancellationToken);
+            var kitchens = await _dbContext.Kitchens.Include(k => k.Address).Include(k => k.Reviews).AsNoTracking().ToListAsync(cancellationToken);
 
             return kitchens.Adapt<IEnumerable<KitchenResponse>>();
         }
@@ -61,7 +61,7 @@ namespace Sofra.Api.Services.KitchenServices
             if (kitchen is null)
                 return Result.Failure<KitchenResponse>(KitchenErrors.KitchenNotFound);
 
-            double distance = await DistanceCalculator.GetDrivingDistanceAsync(
+            double distance =  DistanceCalculator.CalculateDistance(
                 kitchen.Address.Latitude,
                 kitchen.Address.Longitude,
                 request.Latitude,
@@ -79,6 +79,7 @@ namespace Sofra.Api.Services.KitchenServices
             var kitchen = await _dbContext.Kitchens
                 .Where(k => k.Id == Id)
                 .Include(k => k.Address)
+                .Include(k => k.Reviews)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (kitchen is null)

@@ -101,6 +101,7 @@ namespace Sofra.Api.Data
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<Kitchen> Kitchens { get; set; }
         public DbSet<KitchenCategory> KitchenCategories { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
         public DbSet<Meal> Meals { get; set; }
         public DbSet<MealPhoto> MealPhotos { get; set; }
         public DbSet<Order> Orders { get; set; }

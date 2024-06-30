@@ -1,19 +1,21 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sofra.Api.Abstractions;
 using Sofra.Api.Contracts.Authentication;
 using Sofra.Api.Contracts.Customer;
 using Sofra.Api.Contracts.Kitchen;
 using Sofra.Api.Services;
+using Sofra.Api.Services.PasswordRecoveryServices;
 
 namespace Sofra.Api.Controllers;
 
 [Route("[controller]")]
 [ApiController]
-public class AuthController(IAuthService authService) : ControllerBase
+public class AuthController(IAuthService authService,IPasswordRecoveryService passwordRecoveryService) : ControllerBase
 {
 
     private readonly IAuthService _authService = authService;
+    private readonly IPasswordRecoveryService _passwordRecoveryService = passwordRecoveryService;
 
     [HttpPost("")]
     public async Task<IActionResult> LoginAsync([FromBody] Contracts.Authentication.LoginRequest request, CancellationToken cancellationToken)
@@ -57,4 +59,28 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return result.IsSuccess ? Ok() : result.ToProblem();
     }
+
+    [HttpPost("forget-password")]
+    public async Task<IActionResult> ForgetPassword([FromBody] string Email)
+    {
+        var result = await _passwordRecoveryService.SendRecoveryEmailAsync(Email);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromQuery] string Email, [FromQuery] string Token, [FromBody] string NewPassword)
+    {
+        var result = await _passwordRecoveryService.ResetPasswordAsync(Email,Token,NewPassword);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePassword request)
+    {
+        var result = await _authService.ChangePasswordAsync(request.oldPassword,request.NewPassword);
+        return result.IsSuccess ? Ok() : result.ToProblem();
+    }
+
+
 }

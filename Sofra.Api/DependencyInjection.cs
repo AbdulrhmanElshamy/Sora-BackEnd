@@ -12,11 +12,16 @@ using Sofra.Api.Data;
 using Sofra.Api.Models;
 using Sofra.Api.Services;
 using Sofra.Api.Services.CartServices;
+using Sofra.Api.Services.CashInServices;
 using Sofra.Api.Services.CategoryServices;
+using Sofra.Api.Services.EmailServices;
 using Sofra.Api.Services.FavoriteServices;
 using Sofra.Api.Services.KitchenServices;
 using Sofra.Api.Services.MealServices;
+using Sofra.Api.Services.NotificationSrevices;
 using Sofra.Api.Services.OrderServices;
+using Sofra.Api.Services.PasswordRecoveryServices;
+using Sofra.Api.Services.ReviewServices;
 using System.Reflection;
 using System.Text;
 using X.Paymob.CashIn;
@@ -35,9 +40,11 @@ public static class DependencyInjection
                 builder
                     .AllowAnyMethod()
                     .AllowAnyHeader()
-                    .WithOrigins(configuration.GetSection("AllowedOrigins").Get<string[]>()!)
+                    .AllowAnyOrigin()
             )
         );
+
+        services.AddSignalR();
 
         services.AddAuthConfig(configuration);
 
@@ -59,6 +66,11 @@ public static class DependencyInjection
         services.AddScoped<ICartService, CartService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
+        services.AddScoped<ICashInService, CashInService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IReviewService, ReviewService>();
+        services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
         //services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();
 

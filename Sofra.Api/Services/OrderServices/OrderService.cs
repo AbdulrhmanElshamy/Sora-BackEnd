@@ -7,13 +7,34 @@ using Sofra.Api.Errors;
 using Sofra.Api.Enums;
 using System.Security.Claims;
 using Sofra.Api.Models;
+using Azure.Core;
+using Sofra.Api.Contracts.CashIn;
+using Sofra.Api.Services.NotificationSrevices;
 
 namespace Sofra.Api.Services.OrderServices
 {
-    public class OrderService(ApplicationDbContext dbContext,IHttpContextAccessor httpContextAccessor) : IOrderService
+    public class OrderService(ApplicationDbContext dbContext, IHttpContextAccessor httpContextAccessor,INotificationService notificationService) : IOrderService
     {
         private readonly ApplicationDbContext _dbContext = dbContext;
         private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
+        private readonly INotificationService _notificationService = notificationService;
+
+
+
+        public async Task<Result<List<OrderResponse>>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            var CurrentUserId = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            var CurrentKitchenId = await _dbContext
+                                          .Kitchens
+                                          .Where(c => c.ApplicationUserId == CurrentUserId)
+                                          .Select(c => c.Id)
+                                          .FirstOrDefaultAsync(cancellationToken);
+
+            var orders = await _dbContext.Orders.Where(o => o.KitchenId == CurrentKitchenId).ToListAsync(cancellationToken);
+
+            return Result.Success(orders.Adapt<List<OrderResponse>>());
+        }
 
 
         public async Task<Result<OrderResponse>> GetAsync(int Id, CancellationToken cancellationToken = default)
@@ -23,7 +44,7 @@ namespace Sofra.Api.Services.OrderServices
 
             if (order is null)
                 return Result.Failure<OrderResponse>(OrderErrors.OrderNotFound);
-        
+
             return Result.Success(order.Adapt<OrderResponse>());
         }
 
@@ -32,15 +53,19 @@ namespace Sofra.Api.Services.OrderServices
         public async Task<Result<OrderResponse>> AddAsync(OrderRequest request, CancellationToken cancellationToken = default)
         {
 
-            var Kitchen = await _dbContext.Meals.FirstOrDefaultAsync(k => k.Id == request.Details.Select(m => m.Id).FirstOrDefault(),cancellationToken);
-            if (Kitchen is null)
+            var meal = await _dbContext.Meals.FirstOrDefaultAsync(k => k.Id == request.Details.Select(m => m.MealId).FirstOrDefault(), cancellationToken);
+            if (meal is null)
                 return Result.Failure<OrderResponse>(MealErrors.MealNotFound);
 
+            foreach (var item in request.Details)
+            {
+                if (!(await _dbContext.Meals.Include(m => m.Kitchen).AnyAsync(m => m.Id == item.MealId && m.KitchenId == meal.KitchenId)))
+                    return Result.Failure<OrderResponse>(OrderErrors.AllItemsFromOneKitchen);
 
-            var AllItemsFromOneKitchen = await _dbContext.Meals.AllAsync(c => c.KitchenId == Kitchen.Id);
+                if (!(await _dbContext.Kitchens.AnyAsync(k => k.Id == meal.KitchenId && k.Enabled, cancellationToken)))
+                    return Result.Failure<OrderResponse>(KitchenErrors.KitchenClosed);
 
-            if (!AllItemsFromOneKitchen)
-                return Result.Failure<OrderResponse>(OrderErrors.AllItemsFromOneKitchen);
+            }
 
             var CurrentCustomerId = await GetCustomerId();
 
@@ -51,6 +76,7 @@ namespace Sofra.Api.Services.OrderServices
                 order = new Order()
                 {
                     CustomerId = CurrentCustomerId,
+                    KitchenId = meal.KitchenId
                 };
 
             }
@@ -62,13 +88,19 @@ namespace Sofra.Api.Services.OrderServices
 
             foreach (var item in request.Details)
             {
-                if (await _dbContext.Meals.AnyAsync(m => m.Id == item.MealId, cancellationToken))
+                if (!await _dbContext.Meals.AnyAsync(m => m.Id == item.MealId && m.IsAvailable, cancellationToken))
                     return Result.Failure<OrderResponse>(MealErrors.MealNotFound);
 
 
             }
 
             order.OrderDetails = request.Details.Adapt<ICollection<Models.OrderDetail>>();
+            order.Payment = request.PaymentType;
+            var mealPrices = await Task.WhenAll(request.Details.Select(async d =>
+                                    new { d.Quantity, Price = await _dbContext.Meals.Where(m => m.Id == d.MealId).Select(m => m.Price).FirstOrDefaultAsync() }));
+
+            order.TotalPrice = mealPrices.Sum(item => item.Quantity * item.Price);
+            order.Notes = request.Notes;
 
             _dbContext.Update(order);
             await _dbContext.SaveChangesAsync();
@@ -80,15 +112,34 @@ namespace Sofra.Api.Services.OrderServices
 
 
 
-        public async Task<Result> ConfirmAsync(int Id,CancellationToken cancellationToken = default)
+        public async Task<Result<Notification>> ConfirmAsync(int Id)
         {
-            var order = await Get(Id, cancellationToken);
-
+            var order = await Get(Id);
 
             if (order is null)
-                return Result.Failure(OrderErrors.OrderNotFound);
+                return Result.Failure<Notification>(OrderErrors.OrderNotFound);
+
+            _dbContext.Update(order);
+            await _dbContext.SaveChangesAsync();
+
+            var orderDetail = await _dbContext.OrderDetails.FirstOrDefaultAsync(k => k.OrderId == order.Id);
+            if(orderDetail is null)
+                                return Result.Failure<Notification>(NotificationErrors.NotificationNotFound);
 
 
+            var KitchenId = await _dbContext.Meals.Where(m => m.Id == orderDetail.MealId).Include(m => m.Kitchen).Select(m => m.KitchenId).FirstOrDefaultAsync();
+
+            var notification = new Notification()
+            {
+                Title = "طلب جديد",
+                Description = $"عدد الواجبات المطلوبة{order.OrderDetails.Count()}",
+                KitchenId = KitchenId
+            };
+            var result = _notificationService.AddAsync(notification);
+            if (result.IsFaulted)
+                return Result.Failure<Notification>(NotificationErrors.NotificationNotFound);
+
+            return Result.Success(notification);
         }
 
 
@@ -99,7 +150,7 @@ namespace Sofra.Api.Services.OrderServices
             var order = await Get(Id, cancellationToken);
 
 
-            if (order is null) 
+            if (order is null)
                 return Result.Failure(OrderErrors.OrderNotFound);
 
 
@@ -111,7 +162,7 @@ namespace Sofra.Api.Services.OrderServices
         }
 
 
-        private async Task<Order?> Get(int Id,CancellationToken cancellationToken = default!)
+        private async Task<Order?> Get(int Id, CancellationToken cancellationToken = default!)
         {
             var CurrentCustomerId = await GetCustomerId();
 
@@ -137,7 +188,6 @@ namespace Sofra.Api.Services.OrderServices
                                           .FirstOrDefaultAsync(cancellationToken);
             return CurrentCustomerId;
         }
-
 
     }
 }

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Sofra.Api.Abstractions;
 using Sofra.Api.Contracts.Order;
 using Sofra.Api.Services.OrderServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Sofra.Api.Controllers
 {
@@ -12,6 +14,19 @@ namespace Sofra.Api.Controllers
     public class OrderController(IOrderService orderService) : ControllerBase
     {
         private readonly IOrderService _orderService = orderService;
+
+        private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
+        {
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        };
+
+
+        [HttpGet("")]
+        [Authorize(Roles = "Kitchen")]
+        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+        {
+            return Ok(await _orderService.GetAllAsync(cancellationToken));
+        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> Get([FromRoute] int id, CancellationToken cancellationToken)
@@ -31,12 +46,13 @@ namespace Sofra.Api.Controllers
                 : result.ToProblem();
         }
 
-        [HttpPost("{id}")]
+        [HttpPost("Delete/{id}")]
         public async Task<IActionResult> Clear([FromRoute] int id, CancellationToken cancellationToken)
         {
             var result = await _orderService.DeleteAsync(id, cancellationToken);
 
             return result.IsSuccess ? Ok() : result.ToProblem();
         }
+
     }
 }

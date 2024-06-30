@@ -1,4 +1,4 @@
 ﻿namespace Sofra.Api.Contracts.Order
 {
-    public record OrderResponse(int Id,DateTime CreatedOn,string Status,string Payment,decimal TotalPrice,string Notes,IEnumerable<OrderDetail> Details);
+    public record OrderResponse(int Id,DateTime CreatedOn,string Status,string Payment,decimal TotalPrice,string Notes,int KitchenId,IEnumerable<OrderDetail> Details);
 }

@@ -14,10 +14,10 @@ namespace Sofra.Api.Mapping
                .NewConfig<Meal, MealResponse>()
                .Map(dest => dest.MealPhotos , src => src.MealPhotos.Select(m => m.Image).ToList());
 
-            config
-               .NewConfig<Kitchen, KitchenResponse>()
-               .Map(dest => dest.Latitude, src => src.Address.Latitude)
-               .Map(dest => dest.Longitude, src => src.Address.Longitude);
+            config.NewConfig<Kitchen, KitchenResponse>()
+                .Map(dest => dest.Latitude, src => src.Address != null ? src.Address.Latitude : 0)
+                .Map(dest => dest.Longitude, src => src.Address != null ? src.Address.Longitude : 0)
+                .Map(dest => dest.Rate, src => src.Reviews != null && src.Reviews.Any() ? src.Reviews.Average(c => c.Rate) : 0);
 
         }
     }

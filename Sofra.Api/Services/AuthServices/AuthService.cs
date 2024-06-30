@@ -14,14 +14,15 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 using Sofra.Application.Helper;
 using Microsoft.EntityFrameworkCore;
 using Sofra.Api.Errors;
+using System.Security.Claims;
 namespace Sofra.Api.Services;
 
-public class AuthService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IJwtProvider jwtProvider) : IAuthService
+public class AuthService(ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IJwtProvider jwtProvider,IHttpContextAccessor httpContextAccessor) : IAuthService
 {
     private readonly ApplicationDbContext _dbContext = dbContext;
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IJwtProvider _jwtProvider = jwtProvider;
-
+    private readonly IHttpContextAccessor _httpContextAccessor = httpContextAccessor;
     private readonly int _refreshTokenExpiryDays = 14;
 
     public async Task<Result<AuthResponse>> GetTokenAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -196,5 +197,21 @@ public class AuthService(ApplicationDbContext dbContext, UserManager<Application
         }
 
         return Result.Failure<AuthResponse>(UserErrors.InvalidCredentials);
+    }
+
+    public async Task<Result> ChangePasswordAsync(string OldPassword, string NewPassword)
+    {
+        var CurrentUserEmail = _httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Email)!;
+
+        var user = await _userManager.FindByEmailAsync(CurrentUserEmail);
+
+        if (user is null)
+            return Result.Failure(UserErrors.InvalidCredentials);
+        var result = await _userManager.ChangePasswordAsync(user, OldPassword, NewPassword);
+        
+        if (!result.Succeeded)
+            return Result.Failure(UserErrors.InvalidCredentials);
+
+        return Result.Success();
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.FileProviders;
 using Sofra;
+using Sofra.Api.Hubs;
 using Sofra.Api.Models;
 using Sofra.Api.Seeds;
 using Sofra.API.Seeds;
@@ -40,5 +41,7 @@ await DefaultUsers.SeedAsync(userManger);
 //    RequestPath = "/Resources"
 //});
 app.MapControllers();
+
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.Run();

@@ -15,6 +15,10 @@ namespace Sofra.Api.Models
 
         public int CustomerId { get; set; }
         public Customer Customer { get; set; } = default!;
+
+        public int KitchenId { get; set; }
+        public Kitchen Kitchen { get; set; } = default!;
+
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
 }
